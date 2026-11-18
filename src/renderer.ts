@@ -293,9 +293,16 @@ export async function renderCardToCanvas(options: RenderCardOptions): Promise<Ca
   // 3. Top Logo
   ctx.fillStyle = colors.textColor;
   if (topLogo) {
-    const s = Math.min(1, 550 / topLogo.width, 140 / topLogo.height);
     const t = tint(topLogo, colors.textColor);
-    imageFit(ctx, t, 57, 151, Math.min(550, topLogo.width) * s, Math.min(140, topLogo.height) * s);
+    const bounds = groupConfig.topLogoBounds;
+    if (bounds) {
+      const targetH = bounds.height;
+      const targetW = bounds.width || (topLogo.width * (targetH / topLogo.height));
+      ctx.drawImage(t, bounds.x, bounds.y, targetW, targetH);
+    } else {
+      const s = Math.min(1, 550 / topLogo.width, 140 / topLogo.height);
+      imageFit(ctx, t, 57, 151, Math.min(550, topLogo.width) * s, Math.min(140, topLogo.height) * s);
+    }
   } else {
     text(ctx, groupConfig.name, 57, 178, 64, 720, 'CardBold');
   }

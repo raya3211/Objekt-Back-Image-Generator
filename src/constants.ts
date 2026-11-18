@@ -42,6 +42,7 @@ export interface GroupConfig {
   id: string;
   name: string;
   topLogo: string;
+  topLogoBounds?: { x: number; y: number; width?: number; height: number };
   sideLogo: string | null;
   defaultSeason: string;
   defaultClass: string;
@@ -52,6 +53,7 @@ export const GROUPS: Record<string, GroupConfig> = {
     id: 'group-6',
     name: 'tripleS',
     topLogo: 'logos/group-6/top_logo.png',
+    topLogoBounds: { x: 55, y: 147, width: 99, height: 160 },
     sideLogo: null, // tripleS renders text 'tripleS' in CardBold font
     defaultSeason: 'Cream02',
     defaultClass: 'Double',
@@ -60,6 +62,7 @@ export const GROUPS: Record<string, GroupConfig> = {
     id: 'group-0',
     name: 'ARTMS',
     topLogo: 'logos/group-0/top_logo.png',
+    topLogoBounds: { x: 57, y: 195, height: 55 },
     sideLogo: 'logos/group-0/side_logo.png',
     defaultSeason: 'Ever01',
     defaultClass: 'Double',
@@ -68,6 +71,7 @@ export const GROUPS: Record<string, GroupConfig> = {
     id: 'group-3',
     name: 'idntt',
     topLogo: 'logos/group-3/top_logo.png',
+    topLogoBounds: { x: 57, y: 195, height: 55 },
     sideLogo: 'logos/group-3/side_logo.png',
     defaultSeason: 'Summer25',
     defaultClass: 'Basic',
