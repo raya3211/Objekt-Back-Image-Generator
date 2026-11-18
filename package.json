@@ -1,0 +1,45 @@
+{
+  "name": "objekt-back-image",
+  "version": "1.0.0",
+  "description": "Back image generator for Modhaus Objekt : tripleS, ARTMS, and idntt. Powered by Bun & Skia Canvas",
+  "type": "module",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
+  "bin": {
+    "objekt-back-image": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "generate": "bun run src/cli.ts generate",
+    "serve": "bun run src/server.ts",
+    "dev": "bun --watch src/server.ts",
+    "test": "bun test"
+  },
+  "keywords": [
+    "objekt",
+    "modhaus",
+    "triples",
+    "artms",
+    "idntt",
+    "photocard",
+    "cosmo",
+    "generator",
+    "canvas",
+    "bun"
+  ],
+  "author": "Antigravity & Community",
+  "license": "MIT",
+  "dependencies": {
+    "@napi-rs/canvas": "^1.1.1",
+    "@types/jszip": "^3.4.1",
+    "commander": "^12.0.0",
+    "jszip": "^3.10.2"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas-linux-x64-gnu": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

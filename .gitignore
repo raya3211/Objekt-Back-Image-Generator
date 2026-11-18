@@ -1,0 +1,24 @@
+# Dependencies (installed via bun install)
+node_modules/
+.bun/
+
+# Build and output artifacts
+dist/
+output/
+/*.webp
+/*.png
+/*.jpg
+/*.jpeg
+!assets/**
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
