@@ -44,7 +44,7 @@ Requires [Bun](https://bun.sh) installed.
 
 ```bash
 git clone https://github.com/raya3211/Objekt-Back-Image-Generator.git
-cd Objekt-Back-Image-Maker
+cd Objekt-Back-Image-Generator
 bun install
 ```
 
