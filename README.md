@@ -43,7 +43,7 @@ You can use this tool to complete your Objekts that are missing back images, as 
 Requires [Bun](https://bun.sh) installed.
 
 ```bash
-git clone https://github.com/raya3211/Objekt-Back-Image-Maker.git
+git clone https://github.com/raya3211/Objekt-Back-Image-Generator.git
 cd Objekt-Back-Image-Maker
 bun install
 ```
