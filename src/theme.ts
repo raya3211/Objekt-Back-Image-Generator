@@ -1,4 +1,4 @@
-import { DEFAULT_SEASON_COLORS, MEMBER_SIGNS } from './constants';
+import { DEFAULT_SEASON_COLORS, MEMBER_SIGNS, parseUnitMembers } from './constants';
 
 export interface CardColors {
   background: string;
@@ -19,6 +19,11 @@ export function detectGroup(member?: string, explicitGroup?: string): string {
   }
   if (member && MEMBER_SIGNS[member]) {
     return MEMBER_SIGNS[member].group;
+  }
+  // Unit pair such as 'S5 × S22' or 'DoHun × HeeJu': use the group of the first member
+  const unit = parseUnitMembers(member);
+  if (unit) {
+    return MEMBER_SIGNS[unit[0].name].group;
   }
   return 'tripleS';
 }

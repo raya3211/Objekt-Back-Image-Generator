@@ -9,6 +9,9 @@ import {
   GROUPS,
   MEMBER_SIGNS,
   SEASON_OUTLINE_STARTS,
+  UNIT_LAYOUT,
+  parseUnitMembers,
+  formatUnitName,
 } from './constants';
 import { resolveColors, detectGroup } from './theme';
 
@@ -179,6 +182,97 @@ function drawNumbering(
   ctx.restore();
 }
 
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Bounding box of the visible (non-transparent) pixels of an image. */
+function contentBounds(image: any, alphaMin = 40): Rect {
+  const c = createCanvas(image.width, image.height);
+  const x = c.getContext('2d');
+  x.drawImage(image, 0, 0);
+  const { data, width, height } = x.getImageData(0, 0, image.width, image.height);
+
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let py = 0; py < height; py++) {
+    for (let px = 0; px < width; px++) {
+      if (data[(py * width + px) * 4 + 3] > alphaMin) {
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+      }
+    }
+  }
+  if (maxX < 0) return { x: 0, y: 0, w: width, h: height };
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
+function resolveSignPath(assets: string, info?: { sign?: string | null }): string | null {
+  if (!info?.sign) return null;
+  const full = path.join(assets, info.sign);
+  if (fs.existsSync(full)) return full;
+  // Check flat signs folder fallback
+  return path.join(assets, 'signs', path.basename(info.sign));
+}
+
+/**
+ * Unit class: draws two signatures. images[0] = smaller S number (left, higher),
+ * images[1] = larger S number (right, lower). Layout numbers live in UNIT_LAYOUT.
+ */
+function drawUnitSigns(ctx: SKRSContext2D, images: any[], color: string) {
+  const L = UNIT_LAYOUT;
+  const items = images.map((image) => ({ tinted: tint(image, color), box: contentBounds(image) }));
+
+  const layout = (scale: number): Rect[] => {
+    const a = { w: items[0].box.w * scale, h: items[0].box.h * scale };
+    const b = { w: items[1].box.w * scale, h: items[1].box.h * scale };
+    return [
+      { x: L.signLeft.x, y: L.signLeft.y, ...a },
+      { x: L.signRight.x - b.w, y: L.signRight.y - b.h, ...b },
+    ];
+  };
+
+  const overlapRatio = (r: Rect[]) => {
+    const ox = Math.min(r[0].x + r[0].w, r[1].x + r[1].w) - Math.max(r[0].x, r[1].x);
+    const oy = Math.min(r[0].y + r[0].h, r[1].y + r[1].h) - Math.max(r[0].y, r[1].y);
+    if (ox <= 0 || oy <= 0) return 0;
+    return (ox * oy) / Math.min(r[0].w * r[0].h, r[1].w * r[1].h);
+  };
+
+  // Shrink both signatures a little when two big ones would collide
+  let scale = L.signScale;
+  let rects = layout(scale);
+  while (overlapRatio(rects) > L.signMaxOverlap && scale > L.signMinScale) {
+    scale = Math.max(L.signMinScale, scale * 0.97);
+    rects = layout(scale);
+  }
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  items.forEach((it, i) => {
+    const r = rects[i];
+    ctx.drawImage(it.tinted, it.box.x, it.box.y, it.box.w, it.box.h, r.x, r.y, r.w, r.h);
+  });
+  ctx.restore();
+}
+
+/** Unit class: vertical divider + white box to the right of the sign area. */
+function drawUnitBox(ctx: SKRSContext2D, color: string) {
+  const { divider, whiteBox } = UNIT_LAYOUT;
+  ctx.fillStyle = color;
+  ctx.fillRect(divider.x, whiteBox.y, divider.width, whiteBox.height);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(whiteBox.x, whiteBox.y, whiteBox.width, whiteBox.height);
+}
+
 function sidebar(
   ctx: SKRSContext2D,
   card: { member: string; group: string; collectionNo?: string; fg: string; sideLogo?: any }
@@ -228,6 +322,10 @@ export async function renderCardToCanvas(options: RenderCardOptions): Promise<Ca
   const className = options.className || groupConfig.defaultClass;
   const normalizedClass = className.toLowerCase();
 
+  // Unit class: member like 'S5 × S22' -> two signatures
+  const unit = normalizedClass === 'unit' ? parseUnitMembers(options.member) : null;
+  const displayMember = unit ? formatUnitName(unit) : options.member;
+
   const colors = await resolveColors({
     group,
     season,
@@ -244,14 +342,8 @@ export async function renderCardToCanvas(options: RenderCardOptions): Promise<Ca
 
   // 2. Resolve Signature
   const signInfo = MEMBER_SIGNS[options.member];
-  let signPath: string | null = null;
-  if (signInfo?.sign) {
-    signPath = path.join(assets, signInfo.sign);
-    if (!fs.existsSync(signPath)) {
-      // Check flat signs folder fallback
-      signPath = path.join(assets, 'signs', path.basename(signInfo.sign));
-    }
-  }
+  const signPath = resolveSignPath(assets, signInfo);
+  const unitSignPaths = unit ? unit.map((u) => resolveSignPath(assets, MEMBER_SIGNS[u.name])) : [];
 
   // 3. Resolve Texture (Special, Premier, Unit)
   let texturePath: string | null = null;
@@ -265,11 +357,16 @@ export async function renderCardToCanvas(options: RenderCardOptions): Promise<Ca
     texturePath = path.join(assets, 'textures', groupConfig.id, 'unit/back.png');
   }
 
-  const [topLogo, sideLogo, signature, backTexture] = await Promise.all([
+  const [topLogo, sideLogo, signature, backTexture, unitSigns] = await Promise.all([
     fs.existsSync(topLogoPath) && options.showTopLogo !== false ? loadImage(topLogoPath).catch(() => null) : null,
     sideLogoPath && fs.existsSync(sideLogoPath) ? loadImage(sideLogoPath).catch(() => null) : null,
     signPath && fs.existsSync(signPath) && options.showSignature !== false ? loadImage(signPath).catch(() => null) : null,
     texturePath && fs.existsSync(texturePath) ? loadImage(texturePath).catch(() => null) : null,
+    Promise.all(
+      unitSignPaths.map((p) =>
+        p && fs.existsSync(p) && options.showSignature !== false ? loadImage(p).catch(() => null) : null
+      )
+    ),
   ]);
 
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
@@ -309,7 +406,7 @@ export async function renderCardToCanvas(options: RenderCardOptions): Promise<Ca
 
   // 4. Rows (NAME, CLASS, SEASON)
   const rows = [
-    ['NAME', options.member, 357],
+    ['NAME', displayMember, 357],
     ['CLASS', className, 579],
     ['SEASON', season, 799],
   ];
@@ -333,8 +430,17 @@ export async function renderCardToCanvas(options: RenderCardOptions): Promise<Ca
   ctx.fillRect(57, 1018, 771, 3);
   ctx.fillRect(57, 1331, 771, 3);
 
+  // Unit class: divider + white box on the right side of the sign area
+  if (unit && UNIT_LAYOUT.whiteBox.enabled) {
+    drawUnitBox(ctx, colors.textColor);
+  }
+
   // 5. Signature
-  if (signature && signInfo) {
+  if (unit) {
+    if (unitSigns.length === 2 && unitSigns.every(Boolean)) {
+      drawUnitSigns(ctx, unitSigns, colors.textColor);
+    }
+  } else if (signature && signInfo) {
     const t = tint(signature, colors.textColor);
     ctx.drawImage(t, signInfo.position[0], signInfo.position[1], signature.width, signature.height);
   }
@@ -342,7 +448,7 @@ export async function renderCardToCanvas(options: RenderCardOptions): Promise<Ca
   // 6. Right Vertical Ribbon
   if (options.showRibbon !== false) {
     sidebar(ctx, {
-      member: options.member,
+      member: displayMember,
       group: groupConfig.name,
       collectionNo: options.collectionNo,
       fg: colors.textColor,

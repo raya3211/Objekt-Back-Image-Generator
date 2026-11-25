@@ -141,6 +141,78 @@ export const TRIPLE_S_MEMBER_SIGNS = Object.fromEntries(
 
 export const CANONICAL_MEMBER_NAMES = Object.keys(MEMBER_SIGNS);
 
+/** tripleS members in S-number order: S1 = SeoYeon ... S24 = JiYeon */
+export const TRIPLES_MEMBERS_BY_NUMBER = [
+  'SeoYeon', 'HyeRin', 'JiWoo', 'ChaeYeon', 'YooYeon', 'SooMin', 'NaKyoung', 'YuBin',
+  'Kaede', 'DaHyun', 'Kotone', 'YeonJi', 'Nien', 'SoHyun', 'Xinyu', 'Mayu',
+  'Lynn', 'JooBin', 'HaYeon', 'ShiOn', 'ChaeWon', 'Sullin', 'SeoAh', 'JiYeon',
+];
+
+/**
+ * Unit class layout: two member signatures on one card.
+ * The member with the smaller S number goes LEFT and HIGH, the larger one goes RIGHT and LOW.
+ * All numbers are canvas pixels on the 1083 x 1673 card. Edit them here to fine-tune the sign area.
+ */
+export const UNIT_LAYOUT = {
+  signScale: 0.64, // size of each signature relative to its original PNG
+  signMinScale: 0.5, // smallest scale allowed when two big signatures collide
+  signMaxOverlap: 0.1, // max share of the smaller signature that may overlap the other one
+  signLeft: { x: 78, y: 1035 }, // TOP-LEFT corner of the left signature (placed higher)
+  signRight: { x: 507, y: 1313 }, // BOTTOM-RIGHT corner of the right signature (placed lower)
+  divider: { x: 512, width: 3 }, // vertical line between the sign area and the white box
+  whiteBox: { x: 515, y: 1021, width: 313, height: 310, enabled: true }, // set enabled:false to hide
+};
+
+export interface UnitMember {
+  name: string; // canonical member name, e.g. 'YooYeon'
+  number?: number; // tripleS S-number, e.g. 5
+}
+
+/**
+ * Parses a unit member string into its two members.
+ * Accepts: 'S5 × S22', 'S5 x S22', 'S5xS22', '5x22', 'YooYeon × Sullin', 'YooYeon x Sullin'.
+ * Returns null when the text is not a pair of known members (e.g. a normal single member).
+ * tripleS pairs are sorted by S number (smaller first).
+ */
+export function parseUnitMembers(raw?: string | null): UnitMember[] | null {
+  if (!raw) return null;
+  const text = raw.trim();
+
+  let tokens: string[];
+  const compact = text.match(/^S?(\d{1,2})\s*[×xX]\s*S?(\d{1,2})$/i);
+  if (compact) {
+    tokens = [compact[1], compact[2]];
+  } else {
+    tokens = text
+      .split(/\s*[×&+,/]\s*|\s+x\s+/i)
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }
+  if (tokens.length !== 2) return null;
+
+  const members: UnitMember[] = [];
+  for (const token of tokens) {
+    const asNumber = token.match(/^S?(\d{1,2})$/i);
+    const name = asNumber
+      ? TRIPLES_MEMBERS_BY_NUMBER[Number(asNumber[1]) - 1]
+      : CANONICAL_MEMBER_NAMES.find((n) => n.toLowerCase() === token.toLowerCase());
+    if (!name) return null;
+    const idx = TRIPLES_MEMBERS_BY_NUMBER.indexOf(name);
+    members.push({ name, number: idx >= 0 ? idx + 1 : undefined });
+  }
+
+  if (members[0].name === members[1].name) return null;
+  if (members.every((m) => m.number)) members.sort((a, b) => a.number! - b.number!);
+  return members;
+}
+
+/** Text shown in the NAME row and on the side ribbon: 'S5 × S22' (or 'DoHun × HeeJu' for names). */
+export function formatUnitName(members: UnitMember[]): string {
+  return members.every((m) => m.number)
+    ? members.map((m) => `S${m.number}`).join(' × ')
+    : members.map((m) => m.name).join(' × ');
+}
+
 /** Season outline start indices (character index where outline font begins) */
 export const SEASON_OUTLINE_STARTS: Record<string, number> = {
   // tripleS & ARTMS

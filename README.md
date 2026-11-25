@@ -75,7 +75,26 @@ bun run src/cli.ts generate -m HeeJin -s Ever01 -c Double -n 101Z -o ./heejin.we
 
 # idntt: DoHun (Summer25 Basic 101)
 bun run src/cli.ts generate -m DoHun -s Summer25 -c Basic -n 101 -o ./dohun.webp
+
+# tripleS Unit: S5 × S22 (Divine02 Unit 301Z)
+bun run src/cli.ts generate -m "S5 × S22" -s Divine02 -c Unit -n 301Z --bg "#FFD39C" --text "#444444" -o ./unit.png -f png
 ```
+
+### 3. Unit Class (two signatures)
+
+For `Unit` class the member is a pair. `S5 × S22`, `S5xS22`, `5x22` and `YooYeon x Sullin` are all accepted;
+the smaller S number is placed on the left (higher), the larger one on the right (lower).
+
+```http
+GET http://localhost:3001/api/generate?group=tripleS&member=S5%20%C3%97%20S22&season=Divine02&class=Unit&number=301Z&bg=%23FFD39C&text=%23444444&format=png
+```
+
+Or via CLI:
+```bash
+bun run src/cli.ts generate -m "S5 × S22" -s Divine02 -c Unit -n 301Z --bg "#FFD39C" --text "#444444" -o ./unit.png -f png
+```
+
+Sign area numbers (scale, left/right anchor, divider and white box) can be tuned in `UNIT_LAYOUT` inside `src/constants.ts`.
 
 ---
 
